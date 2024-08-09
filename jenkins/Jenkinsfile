@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         CI = 'true'
-        // These environment variables will be pulled from Jenkins job configuration
         EC2_IP = "${EC2_IP}"
         APP_DIR = "${APP_DIR}"
     }
@@ -10,21 +9,35 @@ pipeline {
         stage('Build') {
             steps {
                 sh 'npm install'
+                archiveArtifacts artifacts: 'node_modules/**/*', allowEmptyArchive: true
             }
         }
         stage('Test') {
             steps {
-                echo 'Running tests...'
+                sh './jenkins/scripts/test.sh'
+                archiveArtifacts artifacts: 'test-results/**/*', allowEmptyArchive: true
             }
         }
         stage('Deploy') {
             steps {
-                sshagent(['ec2-ssh-credentials']) {
+                sshagent(credentials: ['ec2-ssh-credentials']) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ec2-user@${EC2_IP} 'cd ${APP_DIR} && git pull && npm install && pm2 restart all || pm2 start npm --name "simple-app" -- start'
+                    ssh -o StrictHostKeyChecking=no ec2-user@${EC2_IP} \
+                    'cd ${APP_DIR} && git pull && npm install && pm2 restart all || pm2 start npm --name "simple-app" -- start'
                     """
                 }
             }
+        }
+        stage('Post-Deployment') {
+            steps {
+                // Archive the deployment logs or any other relevant files
+                archiveArtifacts artifacts: 'deploy-logs/**/*', allowEmptyArchive: true
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs() // Clean up the workspace after the build
         }
     }
 }
