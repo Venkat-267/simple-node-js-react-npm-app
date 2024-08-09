@@ -2,8 +2,8 @@ pipeline {
     agent any
     environment {
         CI = 'true'
-        EC2_IP = "${EC2_IP}"
-        APP_DIR = "${APP_DIR}"
+        EC2_IP = "13.201.25.243"
+        APP_DIR = "/home/ec2-user/simple-node-js-react-npm-app"
     }
     stages {
         stage('Build') {
